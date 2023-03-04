@@ -14,17 +14,28 @@ ui <- fluidPage(
                  p("The dataset contains ", nrow(globe), " observations and ", ncol(globe), " variables
                     Here is a small (random) sample of data:"), dataTableOutput("sample")),
         tabPanel("Plot",
-                 sidebarLayout(sidebarPanel(p("yup")), mainPanel(p("nope")))),
+                 sidebarLayout(sidebarPanel(p("You can analyze the global temperature for different regions. 
+                                              Select the regions you are interested in. You see a monthly 
+                                              scatterplot and the corresponding trend lines."),
+                                            radioButtons("colors", label = "Palette:",
+                                                         c("standard", "set2")),
+                                            checkboxGroupInput("reg", "Select regions",
+                                                               choices = unique(globe$region),
+                                                               selected = "globe")), 
+                               mainPanel(plotOutput(),
+                                         textOutput()))),
         tabPanel("Tables",
                  sidebarLayout(
                    sidebarPanel(
                      p("This panel displays average temperature over different time periods: ", 
-                       em("months"), " , ", em("years"), ", and ", em("decades")),
+                       em("months"), ", ", em("years"), ", and ", em("decades")),
                      radioButtons("range", label = "Average over:",
-                                  c(""))),
-                        
-                   mainPanel(p("Temperature range ", min(globe$temp), " - ", max(globe$temp)),
-                             tableOutput("tableone"))
+                                  c("month",
+                                    "year",
+                                    "decade"
+                                    ))),
+                   mainPanel(textOutput("vals"),
+                             dataTableOutput("tableone"))
                  )
       )
     )
@@ -38,15 +49,46 @@ server <- function(input, output) {
       sample_n(5)
   })
   
+  df1 = reactive({
+    if(input$colors == "standard") {
+      cols = c(1)
+    }
+  })
   
-output$tableone = renderDataTable({
-  globe %>% 
-    
-    arrange(desc())
-})
+  output$plotone = renderPlot({
+    p1 = df1()
+    p1
+  })
+  
+  df = reactive({
+      if(input$range == "year") {
+          data = globe %>% 
+            group_by(year) %>% 
+            summarise(ave_temp = mean(temp)) %>% 
+            arrange(year)
+          } else if(input$range == "month") {
+          data = globe %>% 
+              group_by(year, month) %>% 
+              summarise(ave_temp = mean(temp)) %>% 
+              arrange(year)
+          } else {
+          data = globe %>% 
+             mutate(decade = floor(year/10)*10) %>% 
+             group_by(decade) %>% 
+             summarize(ave_temp = mean(temp))
+          }
+      themin = min(data$ave_temp)
+      themax = max(data$ave_temp)
+      data
+  })
+  output$vals = renderText({
+    paste("Temperature range ", df$themin, " to ", df$themax)
+  })
+  output$tableone <- renderDataTable({
+      d1 = df()
+      d1
+  })
 
-  
-  
 }
 
 shinyApp(ui = ui, server = server)
