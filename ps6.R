@@ -4,7 +4,8 @@ library(shiny)
 library(dplyr)
 library(tidyverse)
 globe = read_delim("UAH-lower-troposphere-long.csv.bz2")
-ui <- fluidPage(titlePanel("Global Temperature Data"),
+ui <- fluidPage(
+  titlePanel("Global Temperature Data"),
                 
                 mainPanel(tabsetPanel(
                   tabPanel(
